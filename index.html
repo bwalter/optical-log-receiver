@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#111418" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob: mediastream:; connect-src 'self' blob: data:" />
+    <title>VNA Log Receiver</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main>
+      <h1>VNA Log Receiver</h1>
+
+      <section id="scan-view">
+        <div class="viewport">
+          <video id="video" playsinline muted autoplay></video>
+          <div id="placeholder">Point the camera at the animated QR stream.</div>
+        </div>
+        <div class="progress"><div id="bar"></div></div>
+        <p id="status">Ready.</p>
+        <button id="start" type="button">Start camera</button>
+        <button id="stop" type="button" class="secondary" hidden>Stop</button>
+      </section>
+
+      <section id="result-view" hidden>
+        <dl>
+          <dt>Date/time</dt><dd id="r-datetime"></dd>
+          <dt>Log</dt><dd id="r-logname"></dd>
+          <dt>Log size</dt><dd id="r-logsize"></dd>
+          <dt>Zip</dt><dd id="r-zipname"></dd>
+          <dt>Zip size</dt><dd id="r-zipsize"></dd>
+        </dl>
+        <button id="share" type="button">Share zip</button>
+        <button id="again" type="button" class="secondary">Receive another</button>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
