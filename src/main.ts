@@ -1,7 +1,7 @@
 import QrWorker from "./qr-worker?worker";
 import { FountainDecoder, fnv1a, parseFrame, streamIdentity } from "./protocol";
 import { isContainer, unpackContainer } from "./container";
-import { buildZip, parseVnaPayload, safeStamp } from "./payload";
+import { buildFile, buildZip, parseVnaPayload } from "./payload";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const video = $<HTMLVideoElement>("video");
@@ -131,7 +131,7 @@ async function finish(dec: FountainDecoder): Promise<void> {
     const fileBytes = isContainer(payload) ? await unpackContainer(payload) : payload;
     const log = parseVnaPayload(fileBytes);
     zipFile = buildZip(log);
-    logFile = new File([log.text as BlobPart], `vna-${safeStamp(log.datetime)}.log`, { type: "text/plain" });
+    logFile = buildFile(log);
     showResult(log.datetime, zipFile, logFile);
   } catch (e) {
     resetScanState();

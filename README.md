@@ -2,7 +2,7 @@
 
 A mobile web app that receives VNA log files from a screen via an animated, fountain-coded QR stream — no network connection, pairing or app install required between the devices.
 
-The phone's camera reads the QR stream produced by a [Decimen Optical Transfer](https://github.com/bashalarmistalt/decimen-optical-transfer) compatible sender (wire format v3), reassembles the payload, decodes the brotli-compressed log, packs it as `vna-<datetime>.log` into `vna-<datetime>.zip` and offers either the zip or the plain log via the native share sheet (or as a download where file sharing is not supported).
+The phone's camera reads the QR stream produced by a [Decimen Optical Transfer](https://github.com/bashalarmistalt/decimen-optical-transfer) compatible sender (wire format v3), reassembles the payload, decodes the brotli-compressed content, saves it as `<prefix>-<datetime>.<extension>` (e.g. `vna-2026-10-29T14-54-07Z.log`), packs it into `<prefix>-<datetime>.zip` and offers either the zip or the unzipped file via the native share sheet (or as a download where file sharing is not supported).
 
 Highlights:
 
@@ -32,46 +32,53 @@ Phones only allow camera access on HTTPS pages. With `npm run dev`, open the pri
 
 ### 1. Payload
 
-The transferred file must be ASCII text with three parts separated by a single line feed (`\n`, `0x0A`):
+The transferred file must be text with five parts separated by a single line feed (`\n`, `0x0A`):
 
 ```
-vna-brotli-base64-version1\n<datetime>\n<data>
+vna-brotli-base64-version1\n<prefix>\n<extension>\n<datetime>\n<data>
 ```
 
 | Part | Format | Example |
 | --- | --- | --- |
 | Magic | Literal `vna-brotli-base64-version1` (lowercase, 26 bytes) | `vna-brotli-base64-version1` |
+| Prefix | File name prefix, UTF-8, max. 100 characters, not empty | `vna` |
+| Extension | File extension **without** the dot, `A–Z a–z 0–9 _ -`, max. 16 characters; may be empty | `log` |
 | Datetime | ISO 8601 `YYYY-MM-DDTHH:MM:SSZ` — UTC, uppercase `T` and `Z`, whole seconds | `2026-10-29T14:54:07Z` |
-| Data | `base64(brotli(log text))` — standard alphabet (`A–Z a–z 0–9 + /`), with `=` padding, on a **single line** | `G0gA+J0J8eZ…` |
+| Data | `base64(brotli(file content))` — standard alphabet (`A–Z a–z 0–9 + /`), with `=` padding, on a **single line** | `G0gA+J0J8eZ…` |
 
 Rules for the sender:
 
-- **Log text**: UTF-8 encoded before compression. It is stored unchanged as `vna-<datetime>.log` in the zip (line endings are kept as sent).
+- **File names**: `<prefix>-<datetime>.<extension>`, zipped as `<prefix>-<datetime>.zip`, e.g. `vna` + `log` → `vna-2026-10-29T14-54-07Z.log` in `vna-2026-10-29T14-54-07Z.zip`. With an empty extension line the file has no extension.
+- **Prefix**: must not contain `/ \ < > : " | ? *` or control characters and must not start with `.` (such characters are removed; a prefix that is empty afterwards makes the receiver reject the file).
+- **Extension**: other characters are removed; a leading `.` is tolerated.
+- **File content**: any bytes (text should be UTF-8). It is stored unchanged (line endings are kept as sent). The extensions `log`/`txt`, `csv`, `json` and `xml` are shared with a matching media type, anything else as `application/octet-stream`.
 - **Compression**: brotli (RFC 7932), raw stream as produced by any standard brotli library; quality 11 recommended for the smallest transfer. Not gzip/deflate.
-- **Datetime**: the time the log was captured/exported. In file names `:` becomes `-`, e.g. `vna-2026-10-29T14-54-07Z.log` and `vna-2026-10-29T14-54-07Z.zip`.
+- **Datetime**: the time the file was captured/exported. In file names `:` becomes `-`.
 - **No** BOM, no trailing data after the base64. A trailing newline is tolerated.
 - **Size**: the whole transferred file must stay below 64 MB; a few MB of logs typically compress to a few hundred KB.
 
-The receiver is lenient for compatibility (other separators such as space, `|`, `;`, `,`, `_` or none at all; local offsets like `+01:00`; fractional seconds; URL-safe or line-wrapped base64), but senders should produce exactly the format above.
+The receiver is lenient for compatibility (between datetime and data other separators such as space, `|`, `;`, `,`, `_` or none at all; local offsets like `+01:00`; fractional seconds; URL-safe or line-wrapped base64), but senders should produce exactly the format above.
 
 #### Test vector
 
-Log text (2 lines, each ending with `\n`):
+Prefix `vna`, extension `log`, content (2 lines, each ending with `\n`):
 
 ```
 2026-10-29 14:54:07 INFO sweep start
 2026-10-29 14:54:08 INFO sweep done
 ```
 
-Complete payload (3 lines):
+Complete payload (5 lines):
 
 ```
 vna-brotli-base64-version1
+vna
+log
 2026-10-29T14:54:07Z
 G0gA+J0J8eZkjKQNV58aQs4xTNVQBCf7GZM010ZOT3daAaQMDmzAOaca5rjrSYMSqbyWmyH6IL/yNUjya9sY1hU=
 ```
 
-Result: `vna-2026-10-29T14-54-07Z.zip` containing `vna-2026-10-29T14-54-07Z.log`. Other brotli implementations or quality levels may produce different data bytes; only the decompressed text has to match.
+Result: `vna-2026-10-29T14-54-07Z.zip` containing `vna-2026-10-29T14-54-07Z.log`. Other brotli implementations or quality levels may produce different data bytes; only the decompressed content has to match.
 
 #### Examples
 
@@ -82,10 +89,12 @@ import base64
 from datetime import datetime, timezone
 import brotli
 
-def build_payload(log_text: str, captured: datetime) -> bytes:
+def build_payload(prefix: str, extension: str, content: bytes, captured: datetime) -> bytes:
     stamp = captured.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    data = base64.b64encode(brotli.compress(log_text.encode("utf-8"), quality=11)).decode("ascii")
-    return f"vna-brotli-base64-version1\n{stamp}\n{data}".encode("ascii")
+    data = base64.b64encode(brotli.compress(content, quality=11)).decode("ascii")
+    return f"vna-brotli-base64-version1\n{prefix}\n{extension}\n{stamp}\n{data}".encode("utf-8")
+
+# build_payload("vna", "log", log_text.encode("utf-8"), datetime.now(timezone.utc))
 ```
 
 Node.js:
@@ -93,20 +102,22 @@ Node.js:
 ```js
 import { brotliCompressSync, constants } from "node:zlib";
 
-function buildPayload(logText, captured = new Date()) {
+function buildPayload(prefix, extension, content, captured = new Date()) {
   const stamp = captured.toISOString().replace(/\.\d{3}Z$/, "Z");
-  const data = brotliCompressSync(Buffer.from(logText, "utf8"), {
+  const data = brotliCompressSync(content, {
     params: { [constants.BROTLI_PARAM_QUALITY]: 11 },
   }).toString("base64");
-  return Buffer.from(`vna-brotli-base64-version1\n${stamp}\n${data}`, "ascii");
+  return Buffer.from(`vna-brotli-base64-version1\n${prefix}\n${extension}\n${stamp}\n${data}`, "utf8");
 }
+
+// buildPayload("vna", "log", Buffer.from(logText, "utf8"))
 ```
 
 Shell (`brotli` and GNU coreutils `base64`):
 
 ```sh
 {
-  printf 'vna-brotli-base64-version1\n%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  printf 'vna-brotli-base64-version1\n%s\n%s\n%s\n' vna log "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   brotli -q 11 -c vna.log | base64 -w 0
 } > payload.txt
 ```
