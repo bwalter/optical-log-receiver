@@ -1,0 +1,74 @@
+Optical Log Receiver
+Copyright (c) 2026 The Optical Log Receiver contributors
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version (AGPL-3.0-or-later). See LICENSE for the full text.
+
+Source code: https://github.com/bwalter/optical-log-receiver
+
+-------------------------------------------------------------------------------
+Derived work: Decimen Optical Transfer
+-------------------------------------------------------------------------------
+
+The frame protocol and fountain decoder (src/protocol.ts) and the DCF2
+container format (src/container.ts) are adapted from Decimen Optical Transfer
+to remain wire-compatible with it:
+
+  Decimen Optical Transfer
+  Copyright (c) 2026 Evan Crawley (Bash Alarmist), with portions by Steve Dakh
+  https://github.com/bashalarmistalt/decimen-optical-transfer
+  License: AGPL-3.0-or-later
+
+-------------------------------------------------------------------------------
+Third-party components bundled in the built web app
+-------------------------------------------------------------------------------
+
+zxing-wasm 3.x — QR code decoding (JavaScript + WebAssembly)
+  Copyright (c) 2023 Ze-Zheng Wu
+  https://github.com/Sec-ant/zxing-wasm
+  License: MIT
+
+zxing-cpp — barcode engine compiled into the zxing-wasm WebAssembly module
+  Copyright the ZXing authors and zxing-cpp contributors
+  https://github.com/zxing-cpp/zxing-cpp
+  License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+
+fflate 0.8.x — zip creation
+  Copyright (c) 2026 Arjun Barrett
+  https://github.com/101arrowz/fflate
+  License: MIT
+
+brotli 2.x (brotli.js) — brotli decompression
+  Copyright (c) Devon Govett; based on the Brotli reference decoder,
+  Copyright (c) 2013 Google Inc.
+  https://github.com/foliojs/brotli.js
+  License: MIT
+
+base64-js 1.x — used by brotli.js for its dictionary
+  Copyright (c) 2014 Jameson Little
+  https://github.com/beatgammit/base64-js
+  License: MIT
+
+-------------------------------------------------------------------------------
+MIT License (applies to the MIT-licensed components above)
+-------------------------------------------------------------------------------
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

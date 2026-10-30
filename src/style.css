@@ -115,3 +115,14 @@ dd {
   margin: 0;
   word-break: break-all;
 }
+
+footer {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: #9aa0a6;
+  text-align: center;
+}
+
+footer a {
+  color: #8ab4f8;
+}

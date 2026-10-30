@@ -2,10 +2,12 @@
   "name": "vna-log-receiver",
   "version": "1.0.0",
   "private": true,
+  "license": "AGPL-3.0-or-later",
   "description": "Mobile web app receiving fountain-coded QR (Decimen v3) VNA logs",
+  "repository": "github:bwalter/optical-log-receiver",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && cp LICENSE NOTICE dist/",
     "preview": "vite preview"
   },
   "type": "module",

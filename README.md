@@ -136,6 +136,14 @@ The payload is sent as an animated QR stream in the Decimen wire format v3. The 
 
 Changing the session id or any other header field (except `seq`) restarts reception on the receiver.
 
-## License note
+## License
 
-The transport is wire-compatible with Decimen Optical Transfer, which is licensed under AGPL-3.0-or-later. The fountain decoder in this repository follows its algorithm; review the licensing implications before distributing.
+Copyright (c) 2026 The Optical Log Receiver contributors. Licensed under the [GNU Affero General Public License v3.0 or later](LICENSE) (AGPL-3.0-or-later).
+
+The frame protocol, fountain decoder and container handling are adapted from [Decimen Optical Transfer](https://github.com/bashalarmistalt/decimen-optical-transfer) (AGPL-3.0-or-later), which makes this repository a derived work under the same license. Bundled third-party components are MIT ([zxing-wasm](https://github.com/Sec-ant/zxing-wasm), [fflate](https://github.com/101arrowz/fflate), [brotli.js](https://github.com/foliojs/brotli.js), [base64-js](https://github.com/beatgammit/base64-js)) and Apache-2.0 ([zxing-cpp](https://github.com/zxing-cpp/zxing-cpp), inside the zxing-wasm WebAssembly module) — both compatible with AGPL-3.0. Full attributions are in [NOTICE](NOTICE).
+
+What this means in practice:
+
+- **Hosting the app** (e.g. on GitHub Pages or an intranet) is conveying it to users over a network: the app links to its source code in the footer, and `LICENSE` and `NOTICE` are shipped in the build output. If you deploy a modified version, point that link to your modified source.
+- **Modified versions** must remain under AGPL-3.0-or-later and keep the copyright and license notices.
+- **Senders** are separate programs that only exchange data with this app; implementing the wire format and payload format documented above does not by itself put a sender under this license. Copying code from this repository or from Decimen into a sender does.
