@@ -12,7 +12,8 @@ const startBtn = $<HTMLButtonElement>("start");
 const stopBtn = $<HTMLButtonElement>("stop");
 const scanView = $("scan-view");
 const resultView = $("result-view");
-const shareBtn = $<HTMLButtonElement>("share");
+const shareZipBtn = $<HTMLButtonElement>("share-zip");
+const shareLogBtn = $<HTMLButtonElement>("share-log");
 const againBtn = $<HTMLButtonElement>("again");
 
 const WORKER_COUNT = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) - 1));
@@ -24,6 +25,7 @@ let identity = "";
 let scanning = false;
 let startedAt = 0;
 let zipFile: File | null = null;
+let logFile: File | null = null;
 
 function setStatus(text: string, error = false): void {
   statusEl.textContent = text;
@@ -129,19 +131,20 @@ async function finish(dec: FountainDecoder): Promise<void> {
     const fileBytes = isContainer(payload) ? await unpackContainer(payload) : payload;
     const log = parseVnaPayload(fileBytes);
     zipFile = buildZip(log);
-    showResult(log.datetime, log.text.length, zipFile);
+    logFile = new File([log.text as BlobPart], `vna-${safeStamp(log.datetime)}.log`, { type: "text/plain" });
+    showResult(log.datetime, zipFile, logFile);
   } catch (e) {
     resetScanState();
     setStatus(`Error: ${e instanceof Error ? e.message : String(e)}`, true);
   }
 }
 
-function showResult(datetime: string, logSize: number, zip: File): void {
+function showResult(datetime: string, zip: File, log: File): void {
   $("r-datetime").textContent = datetime;
-  $("r-logname").textContent = `vna-${safeStamp(datetime)}.log`;
-  $("r-logsize").textContent = formatBytes(logSize);
+  $("r-logname").textContent = log.name;
   $("r-zipname").textContent = zip.name;
-  $("r-zipsize").textContent = formatBytes(zip.size);
+  shareZipBtn.textContent = `Share zip (${formatBytes(zip.size)})`;
+  shareLogBtn.textContent = `Share unzipped (${formatBytes(log.size)})`;
   scanView.hidden = true;
   resultView.hidden = false;
 }
@@ -224,9 +227,9 @@ function resetScanState(): void {
 
 // ---- share
 
-async function shareZip(): Promise<void> {
-  if (!zipFile) return;
-  const data: ShareData = { files: [zipFile], title: zipFile.name };
+async function shareFile(file: File | null): Promise<void> {
+  if (!file) return;
+  const data: ShareData = { files: [file], title: file.name };
   if (navigator.canShare?.(data)) {
     try {
       await navigator.share(data);
@@ -236,10 +239,10 @@ async function shareZip(): Promise<void> {
     }
   }
   // Fallback: plain download.
-  const url = URL.createObjectURL(zipFile);
+  const url = URL.createObjectURL(file);
   const a = document.createElement("a");
   a.href = url;
-  a.download = zipFile.name;
+  a.download = file.name;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -254,9 +257,11 @@ stopBtn.addEventListener("click", () => {
   stopCamera();
   setStatus("Stopped.");
 });
-shareBtn.addEventListener("click", () => void shareZip());
+shareZipBtn.addEventListener("click", () => void shareFile(zipFile));
+shareLogBtn.addEventListener("click", () => void shareFile(logFile));
 againBtn.addEventListener("click", () => {
   zipFile = null;
+  logFile = null;
   resultView.hidden = true;
   scanView.hidden = false;
   resetScanState();

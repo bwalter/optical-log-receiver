@@ -2,7 +2,7 @@
 
 A mobile web app that receives VNA log files from a screen via an animated, fountain-coded QR stream — no network connection, pairing or app install required between the devices.
 
-The phone's camera reads the QR stream produced by a [Decimen Optical Transfer](https://github.com/bashalarmistalt/decimen-optical-transfer) compatible sender (wire format v3), reassembles the payload, decodes the brotli-compressed log, packs it as `vna-<datetime>.log` into `vna-<datetime>.zip` and offers it via the native share sheet (or as a download where file sharing is not supported).
+The phone's camera reads the QR stream produced by a [Decimen Optical Transfer](https://github.com/bashalarmistalt/decimen-optical-transfer) compatible sender (wire format v3), reassembles the payload, decodes the brotli-compressed log, packs it as `vna-<datetime>.log` into `vna-<datetime>.zip` and offers either the zip or the plain log via the native share sheet (or as a download where file sharing is not supported).
 
 Highlights:
 
