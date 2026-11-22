@@ -130,13 +130,17 @@ function onCode(bytes: Uint8Array): void {
 function updateProgress(): void {
   if (!decoder) return;
   const { k, blockLen, totalLen } = decoder.header;
-  // Useful frames track arrival linearly; solved blocks hockey-stick at the end.
-  const frac = decoder.isComplete ? 1 : Math.min(0.99, decoder.usefulFrames / (k * 1.05));
-  bar.style.width = `${(frac * 100).toFixed(1)}%`;
+  // Only solved blocks are real progress: how many repair frames are needed to solve the missing blocks depends on
+  // how many were missed, so any estimate based on the received frames fills up long before the end.
+  bar.style.width = `${((100 * decoder.solvedCount) / k).toFixed(1)}%`;
   const secs = (performance.now() - startedAt) / 1000;
   const rate = secs > 0 ? (decoder.solvedCount * blockLen) / secs : 0;
+  // Repair frames which could not be used yet; each one solves at most one block once enough others are known.
+  const buffered = decoder.usefulFrames - decoder.solvedCount;
   setStatus(
-    `Receiving ${formatBytes(totalLen)} · ${decoder.solvedCount}/${k} blocks · ${formatBytes(rate)}/s`,
+    `Receiving ${formatBytes(totalLen)} · ${decoder.solvedCount}/${k} blocks` +
+      (buffered > 0 ? ` (+${buffered} repair frames buffered)` : "") +
+      ` · ${formatBytes(rate)}/s`,
   );
 }
 
