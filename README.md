@@ -9,6 +9,7 @@ Highlights:
 - Fountain coding: frames can be caught in any order; dropped frames cost time, never correctness.
 - Multiple QR codes per camera frame and a pool of WebAssembly decode workers ([zxing-wasm](https://github.com/Sec-ant/zxing-wasm)).
 - Integrity checks: FNV-1a over the reassembled stream and SHA-256 over the file (when sent in a Decimen container).
+- Alternatively, [cimbar](https://github.com/sz3/libcimbar) color codes: several times faster than QR codes (roughly 50–100 KB/s), decoded with libcimbar's WebAssembly decoder.
 - Fully client-side and self-hosted; works offline once loaded.
 
 ## Build and run
@@ -161,13 +162,22 @@ The payload is sent as an animated QR stream in the Decimen wire format v3. The 
 
 Changing the session id or any other header field (except `seq`) restarts reception on the receiver.
 
+#### Color codes (cimbar)
+
+Alternatively, the payload can be sent as a [cimbar](https://github.com/sz3/libcimbar) color code, compatible with libcimbar 0.6.9 (as produced by [cimbar.org](https://cimbar.org/) or `cimbar_send`):
+
+- **Modes**: `Bm` (1024×720, recommended for wide screens), `Bu` (736×637) or `B` (1024×1024); the receiver detects the mode.
+- **File**: the payload (version 1 or 2) as the transferred file, compressed with zstd as cimbar expects. As the payload data is already compressed, zstd frames of raw blocks are fine.
+- **Pixel-exact**: the code must be shown unscaled (one image pixel per screen pixel), at about 15 frames per second.
+- **Receiver link**: `?mode=color` selects the color code receiver; the mode can also be switched on the page.
+
 While scanning, the receiver shows the camera resolution and frame rate, the decoded frame rate, the codes per decoded frame and the share of duplicate codes. Many duplicates mean that the sender could show new codes faster; few codes per frame mean that the codes are too dense or change too fast for the camera.
 
 ## License
 
 Copyright (c) 2026 The Optical Log Receiver contributors. Licensed under the [GNU Affero General Public License v3.0 or later](LICENSE) (AGPL-3.0-or-later).
 
-The frame protocol, fountain decoder and container handling are adapted from [Decimen Optical Transfer](https://github.com/bashalarmistalt/decimen-optical-transfer) (AGPL-3.0-or-later), which makes this repository a derived work under the same license. Bundled third-party components are MIT ([zxing-wasm](https://github.com/Sec-ant/zxing-wasm), [fflate](https://github.com/101arrowz/fflate), [brotli.js](https://github.com/foliojs/brotli.js), [base64-js](https://github.com/beatgammit/base64-js)) and Apache-2.0 ([zxing-cpp](https://github.com/zxing-cpp/zxing-cpp), inside the zxing-wasm WebAssembly module) — both compatible with AGPL-3.0. Full attributions are in [NOTICE](NOTICE).
+The frame protocol, fountain decoder and container handling are adapted from [Decimen Optical Transfer](https://github.com/bashalarmistalt/decimen-optical-transfer) (AGPL-3.0-or-later), which makes this repository a derived work under the same license. The color code decoder in `public/cimbar/` is libcimbar's unmodified WebAssembly build (MPL-2.0, file-level copyleft, compatible with AGPL-3.0; its source is linked in NOTICE). Other bundled third-party components are MIT ([zxing-wasm](https://github.com/Sec-ant/zxing-wasm), [fflate](https://github.com/101arrowz/fflate), [brotli.js](https://github.com/foliojs/brotli.js), [base64-js](https://github.com/beatgammit/base64-js)) and Apache-2.0 ([zxing-cpp](https://github.com/zxing-cpp/zxing-cpp), inside the zxing-wasm WebAssembly module) — both compatible with AGPL-3.0. Full attributions are in [NOTICE](NOTICE).
 
 What this means in practice:
 

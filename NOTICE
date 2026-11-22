@@ -51,6 +51,33 @@ base64-js 1.x — used by brotli.js for its dictionary
   https://github.com/beatgammit/base64-js
   License: MIT
 
+libcimbar 0.6.9 — color code decoding (public/cimbar/: cimbar_js.js,
+cimbar_js.wasm, unmodified release build; cimbar-worker.js is our own code)
+  Copyright (c) 2019- Stephen Zimmerman
+  https://github.com/sz3/libcimbar
+  License: MPL-2.0 (see cimbar/LICENSE-MPL-2.0 in the built app). The source
+  code of these files is available at the URL above (tag v0.6.9).
+
+  The WebAssembly module statically includes:
+  - OpenCV — https://github.com/opencv/opencv — Apache-2.0
+  - wirehair, Copyright (c) 2018 Christopher A. Taylor
+    https://github.com/catid/wirehair — BSD-3-Clause
+  - libcorrect, Copyright (c) 2016 Brian Armstrong
+    https://github.com/quiet/libcorrect — BSD-3-Clause
+  - zstd, Copyright (c) Meta Platforms, Inc. and affiliates
+    https://github.com/facebook/zstd — BSD-3-Clause (dual-licensed with GPLv2)
+  - {fmt}, Copyright (c) 2012 - present, Victor Zverovich and {fmt}
+    contributors — https://github.com/fmtlib/fmt — MIT
+  - intx, Copyright 2019 Pawel Bylica — https://github.com/chfast/intx
+    — Apache-2.0
+  - libpopcnt, Copyright (c) 2016 - 2020, Kim Walisch
+    https://github.com/kimwalisch/libpopcnt — BSD-2-Clause
+  - PicoSHA2, Copyright (c) 2017 okdshin — MIT
+  - base91, Copyright (c) 2011..2016 r-lyeh — zlib License
+  - concurrentqueue, Copyright (c) 2013-2016 Cameron Desrochers
+    https://github.com/cameron314/concurrentqueue — Simplified BSD (or Boost)
+  - Emscripten runtime (cimbar_js.js) — https://emscripten.org — MIT
+
 -------------------------------------------------------------------------------
 MIT License (applies to the MIT-licensed components above)
 -------------------------------------------------------------------------------

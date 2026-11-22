@@ -134,3 +134,18 @@ footer {
 footer a {
   color: #8ab4f8;
 }
+
+.modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.modes button {
+  font-size: 0.95rem;
+  padding: 10px;
+}
+
+.modes button.selected {
+  background: #1a73e8;
+}

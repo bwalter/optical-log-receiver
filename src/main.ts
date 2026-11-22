@@ -2,6 +2,7 @@ import QrWorker from "./qr-worker?worker";
 import { FountainDecoder, fnv1a, parseFrame, streamIdentity } from "./protocol";
 import { isContainer, unpackContainer } from "./container";
 import { buildFile, buildZip, parseVnaPayload } from "./payload";
+import { CimbarReceiver } from "./cimbar";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const video = $<HTMLVideoElement>("video");
@@ -16,6 +17,8 @@ const resultView = $("result-view");
 const shareZipBtn = $<HTMLButtonElement>("share-zip");
 const shareLogBtn = $<HTMLButtonElement>("share-log");
 const againBtn = $<HTMLButtonElement>("again");
+const modeQrBtn = $<HTMLButtonElement>("mode-qr");
+const modeColorBtn = $<HTMLButtonElement>("mode-color");
 
 const WORKER_COUNT = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) - 1));
 
@@ -27,6 +30,19 @@ let scanning = false;
 let startedAt = 0;
 let zipFile: File | null = null;
 let logFile: File | null = null;
+
+// "qr": fountain-coded QR stream, "color": cimbar color code. The sender links to `?mode=color` for the latter.
+type ReceiveMode = "qr" | "color";
+let receiveMode: ReceiveMode = new URLSearchParams(location.search).get("mode") === "color" ? "color" : "qr";
+
+function setReceiveMode(mode: ReceiveMode): void {
+  receiveMode = mode;
+  modeQrBtn.classList.toggle("selected", mode === "qr");
+  modeColorBtn.classList.toggle("selected", mode === "color");
+  placeholder.textContent =
+    mode === "qr" ? "Point the camera at the animated QR stream." : "Point the camera at the animated color code.";
+}
+setReceiveMode(receiveMode);
 
 function setStatus(text: string, error = false): void {
   statusEl.textContent = text;
@@ -51,15 +67,32 @@ let frameId = 0;
 
 // ---- statistics, shown once per second while scanning to tune the sender speed
 
-const stats = { cameraFrames: 0, decodedFrames: 0, codes: 0, newCodes: 0, since: 0 };
+const stats = { cameraFrames: 0, decodedFrames: 0, codes: 0, newCodes: 0, found: 0, bytes: 0, since: 0 };
 
 function resetStats(): void {
-  Object.assign(stats, { cameraFrames: 0, decodedFrames: 0, codes: 0, newCodes: 0, since: performance.now() });
+  Object.assign(stats, {
+    cameraFrames: 0,
+    decodedFrames: 0,
+    codes: 0,
+    newCodes: 0,
+    found: 0,
+    bytes: 0,
+    since: performance.now(),
+  });
 }
 
 function updateStats(): void {
   const secs = (performance.now() - stats.since) / 1000;
   if (secs < 1) return;
+  if (receiveMode === "color") {
+    const found = stats.decodedFrames > 0 ? Math.round((100 * stats.found) / stats.decodedFrames) : 0;
+    statsEl.textContent =
+      `Camera ${video.videoWidth}×${video.videoHeight} @ ${Math.round(stats.cameraFrames / secs)} fps · ` +
+      `decoded ${Math.round(stats.decodedFrames / secs)} fps · code found in ${found}% · ` +
+      `${formatBytes(stats.bytes / secs)}/s read`;
+    resetStats();
+    return;
+  }
   const perFrame = stats.decodedFrames > 0 ? stats.codes / stats.decodedFrames : 0;
   const duplicates = stats.codes > 0 ? Math.round((100 * (stats.codes - stats.newCodes)) / stats.codes) : 0;
   statsEl.textContent =
@@ -93,13 +126,51 @@ async function submitFrame(): Promise<void> {
   }
 }
 
+// ---- cimbar color code reception
+
+let cimbar: CimbarReceiver | null = null;
+/** Size of the file being received, read from the fountain chunk headers (0 while unknown). */
+let cimbarSize = 0;
+
+function ensureCimbar(): CimbarReceiver {
+  if (cimbar) return cimbar;
+  const count = Math.max(2, Math.min(4, (navigator.hardwareConcurrency || 2) - 1));
+  cimbar = new CimbarReceiver(count, {
+    onFrame: (found, bytes, header) => {
+      stats.decodedFrames++;
+      if (found) stats.found++;
+      stats.bytes += bytes;
+      if (!scanning || !header) return;
+      if (startedAt === 0) startedAt = performance.now();
+      cimbarSize = header.size;
+    },
+    onProgress: (progress) => {
+      if (!scanning || progress.length === 0) return;
+      const done = Math.max(...progress);
+      bar.style.width = `${(100 * done).toFixed(1)}%`;
+      const secs = startedAt > 0 ? (performance.now() - startedAt) / 1000 : 0;
+      const rate = secs > 0 ? (done * cimbarSize) / secs : 0;
+      setStatus(
+        `Receiving ${cimbarSize > 0 ? formatBytes(cimbarSize) : "…"} · ${Math.round(100 * done)}%` +
+          ` · ${formatBytes(rate)}/s`,
+      );
+    },
+    onDone: (_name, bytes) => {
+      if (scanning) void finishPayload(bytes);
+    },
+    onError: (message) => setStatus(`Error: ${message}`, true),
+  });
+  return cimbar;
+}
+
 type RVFCVideo = HTMLVideoElement & { requestVideoFrameCallback?: (cb: () => void) => number };
 
 function frameLoop(): void {
   if (!scanning) return;
   stats.cameraFrames++;
   updateStats();
-  void submitFrame();
+  if (receiveMode === "color") void ensureCimbar().submit(video);
+  else void submitFrame();
   const v = video as RVFCVideo;
   if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(frameLoop);
   else requestAnimationFrame(frameLoop);
@@ -153,10 +224,13 @@ async function finish(dec: FountainDecoder): Promise<void> {
     setStatus("Checksum mismatch — restarting reception.", true);
     return;
   }
+  await finishPayload(isContainer(payload) ? await unpackContainer(payload) : payload);
+}
+
+async function finishPayload(fileBytes: Uint8Array): Promise<void> {
   stopCamera();
   setStatus("Decoding…");
   try {
-    const fileBytes = isContainer(payload) ? await unpackContainer(payload) : payload;
     const log = parseVnaPayload(fileBytes);
     zipFile = buildZip(log);
     logFile = buildFile(log);
@@ -218,7 +292,7 @@ async function startCamera(): Promise<void> {
     scanning = true;
     resetStats();
     statsEl.textContent = "";
-    setStatus("Searching for QR stream…");
+    setStatus(receiveMode === "qr" ? "Searching for QR stream…" : "Searching for color code…");
     void requestWakeLock();
     frameLoop();
   } catch (e) {
@@ -254,6 +328,9 @@ function stopCamera(): void {
 function resetScanState(): void {
   decoder = null;
   identity = "";
+  startedAt = 0;
+  cimbarSize = 0;
+  cimbar?.reset();
   bar.style.width = "0";
 }
 
@@ -289,6 +366,17 @@ stopBtn.addEventListener("click", () => {
   stopCamera();
   setStatus("Stopped.");
 });
+for (const [button, mode] of [
+  [modeQrBtn, "qr"],
+  [modeColorBtn, "color"],
+] as const) {
+  button.addEventListener("click", () => {
+    if (mode === receiveMode) return;
+    setReceiveMode(mode);
+    resetScanState();
+    if (scanning) setStatus(mode === "qr" ? "Searching for QR stream…" : "Searching for color code…");
+  });
+}
 shareZipBtn.addEventListener("click", () => void shareFile(zipFile));
 shareLogBtn.addEventListener("click", () => void shareFile(logFile));
 againBtn.addEventListener("click", () => {
