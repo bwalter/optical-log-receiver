@@ -89,7 +89,9 @@ function updateStats(): void {
     statsEl.textContent =
       `Camera ${video.videoWidth}×${video.videoHeight} @ ${Math.round(stats.cameraFrames / secs)} fps · ` +
       `decoded ${Math.round(stats.decodedFrames / secs)} fps · code found in ${found}% · ` +
-      `${formatBytes(stats.bytes / secs)}/s read`;
+      `${formatBytes(stats.bytes / secs)}/s read` +
+      (frameError ? ` · ${frameError}` : "");
+    frameError = "";
     resetStats();
     return;
   }
@@ -131,6 +133,8 @@ async function submitFrame(): Promise<void> {
 let cimbar: CimbarReceiver | null = null;
 /** Size of the file being received, read from the fountain chunk headers (0 while unknown). */
 let cimbarSize = 0;
+/** Last frame decoding error since the stats were shown. */
+let frameError = "";
 
 function ensureCimbar(): CimbarReceiver {
   if (cimbar) return cimbar;
@@ -159,6 +163,9 @@ function ensureCimbar(): CimbarReceiver {
       if (scanning) void finishPayload(bytes);
     },
     onError: (message) => setStatus(`Error: ${message}`, true),
+    onFrameError: (message) => {
+      frameError = message;
+    },
   });
   return cimbar;
 }

@@ -58,20 +58,28 @@ function bitmapToRgba(bitmap, width, height) {
 
 const FORMATS = { RGBA: 4, NV12: 12, I420: 420 };
 
-// Copies a VideoFrame into the image buffer, natively (YUV) if the decoder supports its format.
+// Copies a VideoFrame into the image buffer, natively (YUV) if the decoder supports its format. copyTo() writes the
+// visible rectangle without applying the frame's rotation (iOS camera frames in portrait are rotated by 90°, with
+// swapped display sizes), so the visible rectangle gives the buffer's dimensions; the decoder handles any rotation.
 async function copyVideoFrame(frame) {
   try {
     const options = frame.format in FORMATS ? {} : { format: "RGBA" };
     const size = frame.allocationSize(options);
     malloc("image", size);
     await frame.copyTo(view("image").subarray(0, size), options);
-    return { format: options.format ?? frame.format, width: frame.displayWidth, height: frame.displayHeight };
+    const rect = frame.visibleRect;
+    return {
+      format: options.format ?? frame.format,
+      width: rect ? rect.width : frame.codedWidth,
+      height: rect ? rect.height : frame.codedHeight,
+    };
   } finally {
     frame.close();
   }
 }
 
 async function decodeFrame(data) {
+  const via = data.frame ? "videoFrame" : "bitmap";
   let image;
   if (data.frame) {
     image = await copyVideoFrame(data.frame);
@@ -94,11 +102,11 @@ async function decodeFrame(data) {
   );
   if (length <= 0) {
     // 0: code found but no chunk decoded, -3: no code found
-    self.postMessage({ type: "frame", found: length === 0, mode: data.mode });
+    self.postMessage({ type: "frame", found: length === 0, mode: data.mode, via });
     return;
   }
   const chunks = view("fountain").slice(0, length);
-  self.postMessage({ type: "frame", found: true, mode: data.mode, chunks }, [chunks.buffer]);
+  self.postMessage({ type: "frame", found: true, mode: data.mode, via, chunks }, [chunks.buffer]);
 }
 
 // Drops partially received files: the decoder state is reset whenever the mode changes.
@@ -165,7 +173,13 @@ function handle(data) {
       else if (data.type === "chunks") decodeChunks(data);
       else if (data.type === "reset") reset();
     } catch (e) {
-      self.postMessage({ type: data.type === "frame" ? "frame" : "error", found: false, message: String(e) });
+      self.postMessage({
+        type: data.type === "frame" ? "frame" : "error",
+        found: false,
+        mode: data.mode,
+        via: data.frame ? "videoFrame" : "bitmap",
+        message: String(e),
+      });
     }
   });
 }

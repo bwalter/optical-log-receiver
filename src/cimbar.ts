@@ -16,6 +16,8 @@ export interface CimbarCallbacks {
   onProgress(progress: number[]): void;
   onDone(name: string, bytes: Uint8Array): void;
   onError(message: string): void;
+  /** A frame could not be decoded (e.g. unsupported camera frame format). */
+  onFrameError?(message: string): void;
 }
 
 /** cimbar mode ids: Bm (1024×720, sender on wide displays), Bu (736×637), B (1024×1024). */
@@ -26,7 +28,15 @@ interface Slot {
   busy: boolean;
 }
 
-type FrameMessage = { type: "frame"; found: boolean; mode: number; chunks?: Uint8Array; message?: string };
+type FramePath = "videoFrame" | "bitmap";
+type FrameMessage = {
+  type: "frame";
+  found: boolean;
+  mode: number;
+  via: FramePath;
+  chunks?: Uint8Array;
+  message?: string;
+};
 type SinkMessage =
   | { type: "progress"; progress: number[] }
   | { type: "done"; name: string; bytes: Uint8Array }
@@ -40,7 +50,12 @@ export class CimbarReceiver {
   /** Detected sender mode, 0 while unknown: frames are then tried with each mode in turn. */
   private mode = 0;
   private attempt = 0;
-  private useVideoFrame = typeof VideoFrame !== "undefined";
+  /**
+   * How camera frames are passed to the workers. VideoFrame (native YUV, no conversion) is preferred, but camera frames
+   * differ between browsers, so until a code is found both paths are tried in turn; the first one finding a code wins.
+   */
+  private path: FramePath | null = typeof VideoFrame !== "undefined" ? null : "bitmap";
+  private submitted = 0;
 
   constructor(
     workerCount: number,
@@ -52,9 +67,14 @@ export class CimbarReceiver {
         slot.busy = false;
         this.onFrame(e.data);
       };
+      slot.worker.onerror = (e) => {
+        slot.busy = false;
+        callbacks.onFrameError?.(`worker: ${e.message || "failed to load"}`);
+      };
       this.slots.push(slot);
     }
     this.sink = new Worker(workerUrl);
+    this.sink.onerror = (e) => callbacks.onError(`Decoder failed: ${e.message || "failed to load"}`);
     this.sink.onmessage = (e: MessageEvent<SinkMessage>) => {
       const data = e.data;
       if (data.type === "progress") callbacks.onProgress(data.progress);
@@ -70,13 +90,14 @@ export class CimbarReceiver {
     slot.busy = true;
     const mode = this.mode || MODES[this.attempt++ % MODES.length];
     try {
-      if (this.useVideoFrame) {
+      const path = this.path ?? (this.submitted++ % 2 === 0 ? "videoFrame" : "bitmap");
+      if (path === "videoFrame") {
         try {
           const frame = new VideoFrame(video, { timestamp: 0 });
           slot.worker.postMessage({ type: "frame", mode, frame }, [frame]);
           return;
         } catch {
-          this.useVideoFrame = false;
+          this.path = "bitmap";
         }
       }
       const bitmap = await createImageBitmap(video);
@@ -101,6 +122,8 @@ export class CimbarReceiver {
   }
 
   private onFrame(data: FrameMessage): void {
+    if (data.message) this.callbacks.onFrameError?.(`${data.via}: ${data.message}`);
+    if (data.found && this.path === null) this.path = data.via;
     const chunks = data.chunks;
     const bytes = chunks?.length ?? 0;
     const header = chunks && bytes >= 6 ? parseHeader(chunks) : null;
