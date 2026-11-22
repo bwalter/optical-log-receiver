@@ -8,6 +8,7 @@ const video = $<HTMLVideoElement>("video");
 const placeholder = $("placeholder");
 const bar = $("bar");
 const statusEl = $("status");
+const statsEl = $("stats");
 const startBtn = $<HTMLButtonElement>("start");
 const stopBtn = $<HTMLButtonElement>("stop");
 const scanView = $("scan-view");
@@ -48,12 +49,32 @@ interface Slot {
 const slots: Slot[] = [];
 let frameId = 0;
 
+// ---- statistics, shown once per second while scanning to tune the sender speed
+
+const stats = { cameraFrames: 0, decodedFrames: 0, codes: 0, newCodes: 0, since: 0 };
+
+function resetStats(): void {
+  Object.assign(stats, { cameraFrames: 0, decodedFrames: 0, codes: 0, newCodes: 0, since: performance.now() });
+}
+
+function updateStats(): void {
+  const secs = (performance.now() - stats.since) / 1000;
+  if (secs < 1) return;
+  const perFrame = stats.decodedFrames > 0 ? stats.codes / stats.decodedFrames : 0;
+  const duplicates = stats.codes > 0 ? Math.round((100 * (stats.codes - stats.newCodes)) / stats.codes) : 0;
+  statsEl.textContent =
+    `Camera ${Math.round(stats.cameraFrames / secs)} fps · decoded ${Math.round(stats.decodedFrames / secs)} fps · ` +
+    `${perFrame.toFixed(1)} codes/frame · ${duplicates}% duplicates`;
+  resetStats();
+}
+
 function ensureWorkers(): void {
   if (slots.length > 0) return;
   for (let i = 0; i < WORKER_COUNT; i++) {
     const slot: Slot = { worker: new QrWorker(), busy: true };
     slot.worker.onmessage = (e: MessageEvent<{ id: number; codes: Uint8Array[] }>) => {
       slot.busy = false;
+      if (e.data.id >= 0) stats.decodedFrames++;
       for (const code of e.data.codes) onCode(code);
     };
     slots.push(slot);
@@ -76,6 +97,8 @@ type RVFCVideo = HTMLVideoElement & { requestVideoFrameCallback?: (cb: () => voi
 
 function frameLoop(): void {
   if (!scanning) return;
+  stats.cameraFrames++;
+  updateStats();
   void submitFrame();
   const v = video as RVFCVideo;
   if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(frameLoop);
@@ -98,7 +121,8 @@ function onCode(bytes: Uint8Array): void {
     decoder = new FountainDecoder(header);
     startedAt = performance.now();
   }
-  decoder.addFrame(header.seq, block);
+  stats.codes++;
+  if (decoder.addFrame(header.seq, block)) stats.newCodes++;
   updateProgress();
   if (decoder.isComplete) void finish(decoder);
 }
@@ -186,6 +210,8 @@ async function startCamera(): Promise<void> {
     startBtn.hidden = true;
     stopBtn.hidden = false;
     scanning = true;
+    resetStats();
+    statsEl.textContent = "";
     setStatus("Searching for QR stream…");
     void requestWakeLock();
     frameLoop();

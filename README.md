@@ -32,6 +32,20 @@ Phones only allow camera access on HTTPS pages. With `npm run dev`, open the pri
 
 ### 1. Payload
 
+Two payload versions are accepted. **Version 2** (binary) is recommended: it is a third smaller than version 1, so the optical transfer is a third faster.
+
+#### Version 2 (binary)
+
+Four text lines, each terminated by a single line feed (`\n`, `0x0A`), followed by the raw brotli stream:
+
+```
+vna-brotli-version2\n<prefix>\n<extension>\n<datetime>\n<brotli(file content)>
+```
+
+Prefix, extension and datetime follow the rules of version 1 below (each header line at most 256 bytes). The data is the raw brotli stream (RFC 7932) of the file content, without any encoding; already compressed content (e.g. videos) may be wrapped in uncompressed brotli meta-blocks.
+
+#### Version 1 (text)
+
 The transferred file must be text with five parts separated by a single line feed (`\n`, `0x0A`):
 
 ```
@@ -59,7 +73,7 @@ Rules for the sender:
 
 The receiver is lenient for compatibility (between datetime and data other separators such as space, `|`, `;`, `,`, `_` or none at all; local offsets like `+01:00`; fractional seconds; URL-safe or line-wrapped base64), but senders should produce exactly the format above.
 
-#### Test vector
+#### Test vector (version 1)
 
 Prefix `vna`, extension `log`, content (2 lines, each ending with `\n`):
 
@@ -80,7 +94,7 @@ G0gA+J0J8eZkjKQNV58aQs4xTNVQBCf7GZM010ZOT3daAaQMDmzAOaca5rjrSYMSqbyWmyH6IL/yNUjy
 
 Result: `vna-2026-10-29T14-54-07Z.zip` containing `vna-2026-10-29T14-54-07Z.log`. Other brotli implementations or quality levels may produce different data bytes; only the decompressed content has to match.
 
-#### Examples
+#### Examples (version 1)
 
 Python (`pip install brotli`):
 
@@ -146,6 +160,8 @@ The payload is sent as an animated QR stream in the Decimen wire format v3. The 
 - **Container** (optional): the transferred data may either be the raw payload or a Decimen `DCF2` container (as produced by the Decimen sender: file name, media type, optional gzip, SHA-256). See [src/container.ts](src/container.ts).
 
 Changing the session id or any other header field (except `seq`) restarts reception on the receiver.
+
+While scanning, the receiver shows the camera frame rate, the decoded frame rate, the codes per decoded frame and the share of duplicate codes. Many duplicates mean that the sender could show new codes faster; few codes per frame mean that the codes are too dense or change too fast for the camera.
 
 ## License
 

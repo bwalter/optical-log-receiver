@@ -15,6 +15,8 @@ const options: ReaderOptions = {
   tryRotate: false,
   tryInvert: false,
   maxNumberOfSymbols: 9,
+  // The stream codes are dense: decoding downscaled copies of the frame never succeeds and only costs time.
+  tryDownscale: false,
 };
 
 let canvas: OffscreenCanvas | undefined;

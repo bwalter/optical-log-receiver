@@ -86,6 +86,14 @@ video {
   color: #f28b82;
 }
 
+#stats {
+  margin: 0;
+  min-height: 1.2em;
+  font-size: 0.8em;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
 button {
   font: inherit;
   font-size: 1.1rem;

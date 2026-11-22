@@ -134,8 +134,9 @@ export class FountainDecoder {
     return this.solvedCount >= this.header.k;
   }
 
-  addFrame(seq: number, block: Uint8Array): void {
-    if (this.isComplete || this.seen.has(seq)) return;
+  /** Returns false if the frame was already received (or the payload is complete), true otherwise. */
+  addFrame(seq: number, block: Uint8Array): boolean {
+    if (this.isComplete || this.seen.has(seq)) return false;
     this.seen.add(seq);
 
     const idx = new Set(frameComposition(this.header.k, this.header.sessionId, seq));
@@ -148,11 +149,11 @@ export class FountainDecoder {
         idx.delete(b);
       }
     }
-    if (idx.size === 0) return;
+    if (idx.size === 0) return true;
     this.usefulFrames++;
     if (idx.size === 1) {
       this.resolve(idx.values().next().value!, words);
-      return;
+      return true;
     }
     const pf: PendingFrame = { idx, words };
     for (const b of idx) {
@@ -160,6 +161,7 @@ export class FountainDecoder {
       if (!set) this.byBlock.set(b, (set = new Set()));
       set.add(pf);
     }
+    return true;
   }
 
   private resolve(b0: number, w0: Uint32Array): void {
