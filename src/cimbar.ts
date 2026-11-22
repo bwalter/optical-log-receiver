@@ -42,7 +42,7 @@ type SinkMessage =
   | { type: "done"; name: string; bytes: Uint8Array }
   | { type: "error"; message: string };
 
-const workerUrl = `${import.meta.env.BASE_URL}cimbar/cimbar-worker.js`;
+const workerUrl = `${import.meta.env.BASE_URL}cimbar/cimbar-worker.js?v=${import.meta.env.VITE_BUILD_ID as string}`;
 
 export class CimbarReceiver {
   private readonly slots: Slot[] = [];
@@ -122,7 +122,10 @@ export class CimbarReceiver {
   }
 
   private onFrame(data: FrameMessage): void {
-    if (data.message) this.callbacks.onFrameError?.(`${data.via}: ${data.message}`);
+    if (data.message) {
+      this.callbacks.onFrameError?.(`${data.via}: ${data.message}`);
+      if (data.via === "videoFrame") this.path = "bitmap";
+    }
     if (data.found && this.path === null) this.path = data.via;
     const chunks = data.chunks;
     const bytes = chunks?.length ?? 0;

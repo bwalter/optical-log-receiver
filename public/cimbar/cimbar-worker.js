@@ -46,22 +46,34 @@ function report() {
 let canvas;
 let context;
 
-function bitmapToRgba(bitmap, width, height) {
+// Draws an ImageBitmap or VideoFrame and returns its RGBA pixels (the image is closed).
+function toRgba(image, width, height) {
   if (!canvas || canvas.width !== width || canvas.height !== height) {
     canvas = new OffscreenCanvas(width, height);
     context = canvas.getContext("2d", { willReadFrequently: true });
   }
-  context.drawImage(bitmap, 0, 0);
-  bitmap.close();
+  try {
+    context.drawImage(image, 0, 0, width, height);
+  } finally {
+    image.close();
+  }
   return context.getImageData(0, 0, width, height).data;
+}
+
+function copyRgba(pixels, width, height) {
+  malloc("image", pixels.length);
+  view("image").set(pixels);
+  return { format: "RGBA", width, height };
 }
 
 const FORMATS = { RGBA: 4, NV12: 12, I420: 420 };
 
-// Copies a VideoFrame into the image buffer, natively (YUV) if the decoder supports its format. copyTo() writes the
+// Copies a VideoFrame into the image buffer, natively (YUV) if the decoder supports its format. Frames without a
+// readable format (iOS camera frames report none) are drawn on a canvas instead. copyTo() writes the
 // visible rectangle without applying the frame's rotation (iOS camera frames in portrait are rotated by 90°, with
 // swapped display sizes), so the visible rectangle gives the buffer's dimensions; the decoder handles any rotation.
 async function copyVideoFrame(frame) {
+  if (!frame.format) return copyRgba(toRgba(frame, frame.displayWidth, frame.displayHeight), frame.displayWidth, frame.displayHeight);
   try {
     const options = frame.format in FORMATS ? {} : { format: "RGBA" };
     const size = frame.allocationSize(options);
@@ -84,10 +96,7 @@ async function decodeFrame(data) {
   if (data.frame) {
     image = await copyVideoFrame(data.frame);
   } else {
-    const pixels = bitmapToRgba(data.bitmap, data.width, data.height);
-    malloc("image", pixels.length);
-    view("image").set(pixels);
-    image = { format: "RGBA", width: data.width, height: data.height };
+    image = copyRgba(toRgba(data.bitmap, data.width, data.height), data.width, data.height);
   }
   Module._cimbard_configure_decode(data.mode);
   const fountainSize = Module._cimbard_get_bufsize();

@@ -172,15 +172,49 @@ function ensureCimbar(): CimbarReceiver {
 
 type RVFCVideo = HTMLVideoElement & { requestVideoFrameCallback?: (cb: () => void) => number };
 
-function frameLoop(): void {
-  if (!scanning) return;
-  stats.cameraFrames++;
-  updateStats();
-  if (receiveMode === "color") void ensureCimbar().submit(video);
-  else void submitFrame();
+/** Incremented to stop the running frame loop when a new one is started. */
+let frameLoopId = 0;
+
+function startFrameLoop(): void {
+  const id = ++frameLoopId;
   const v = video as RVFCVideo;
-  if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(frameLoop);
-  else requestAnimationFrame(frameLoop);
+  const step = (): void => {
+    if (!scanning || id !== frameLoopId) return;
+    stats.cameraFrames++;
+    updateStats();
+    if (receiveMode === "color") void ensureCimbar().submit(video);
+    else void submitFrame();
+    if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(step);
+    else requestAnimationFrame(step);
+  };
+  step();
+}
+
+/**
+ * iOS pauses the video (and may end the camera track) while the page is hidden; the frame callbacks then stop. Resumes
+ * the camera without losing the reception progress.
+ */
+let resuming = false;
+
+async function resumeCamera(): Promise<void> {
+  if (!scanning || resuming) return;
+  resuming = true;
+  try {
+    const track = stream?.getVideoTracks()[0];
+    if (!track || track.readyState === "ended") {
+      stopCamera();
+      await startCamera();
+      return;
+    }
+    try {
+      await video.play();
+    } catch {
+      // retried on the next visibility change
+    }
+    startFrameLoop();
+  } finally {
+    resuming = false;
+  }
 }
 
 // ---- fountain assembly
@@ -291,6 +325,7 @@ async function startCamera(): Promise<void> {
     } catch {
       // not supported on this device
     }
+    track?.addEventListener("unmute", () => void resumeCamera());
     video.srcObject = stream;
     await video.play();
     placeholder.hidden = true;
@@ -299,9 +334,9 @@ async function startCamera(): Promise<void> {
     scanning = true;
     resetStats();
     statsEl.textContent = "";
-    setStatus(receiveMode === "qr" ? "Searching for QR stream…" : "Searching for color code…");
+    if (!startedAt) setStatus(receiveMode === "qr" ? "Searching for QR stream…" : "Searching for color code…");
     void requestWakeLock();
-    frameLoop();
+    startFrameLoop();
   } catch (e) {
     setStatus(`Camera error: ${e instanceof Error ? e.message : String(e)}`, true);
     stopCamera();
@@ -396,5 +431,7 @@ againBtn.addEventListener("click", () => {
 });
 // The browser drops the wake lock whenever the page is hidden.
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && scanning) void requestWakeLock();
+  if (document.visibilityState !== "visible" || !scanning) return;
+  void requestWakeLock();
+  void resumeCamera();
 });
