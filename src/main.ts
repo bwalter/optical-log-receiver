@@ -63,7 +63,7 @@ function updateStats(): void {
   const perFrame = stats.decodedFrames > 0 ? stats.codes / stats.decodedFrames : 0;
   const duplicates = stats.codes > 0 ? Math.round((100 * (stats.codes - stats.newCodes)) / stats.codes) : 0;
   statsEl.textContent =
-    `Camera ${Math.round(stats.cameraFrames / secs)} fps · decoded ${Math.round(stats.decodedFrames / secs)} fps · ` +
+    `Camera ${video.videoWidth}×${video.videoHeight} @ ${Math.round(stats.cameraFrames / secs)} fps · decoded ${Math.round(stats.decodedFrames / secs)} fps · ` +
     `${perFrame.toFixed(1)} codes/frame · ${duplicates}% duplicates`;
   resetStats();
 }
@@ -178,8 +178,10 @@ function showResult(datetime: string, zip: File, log: File): void {
 async function acquireCamera(): Promise<MediaStream> {
   const base: MediaTrackConstraints = {
     facingMode: { ideal: "environment" },
-    width: { ideal: 1280 },
-    height: { ideal: 960 },
+    // Dense codes need every camera pixel: iOS picks the closest format which also supports the frame rate below
+    // (1920×1440 on recent iPhones, 1920×1080 or 1280×960 otherwise).
+    width: { ideal: 1920 },
+    height: { ideal: 1440 },
   };
   try {
     // iOS treats an `ideal` 60 fps as a hint and delivers 30; demand it first.

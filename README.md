@@ -161,7 +161,7 @@ The payload is sent as an animated QR stream in the Decimen wire format v3. The 
 
 Changing the session id or any other header field (except `seq`) restarts reception on the receiver.
 
-While scanning, the receiver shows the camera frame rate, the decoded frame rate, the codes per decoded frame and the share of duplicate codes. Many duplicates mean that the sender could show new codes faster; few codes per frame mean that the codes are too dense or change too fast for the camera.
+While scanning, the receiver shows the camera resolution and frame rate, the decoded frame rate, the codes per decoded frame and the share of duplicate codes. Many duplicates mean that the sender could show new codes faster; few codes per frame mean that the codes are too dense or change too fast for the camera.
 
 ## License
 
