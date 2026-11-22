@@ -149,3 +149,67 @@ footer a {
 .modes button.selected {
   background: #1a73e8;
 }
+
+.gauge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gauge svg {
+  width: 52%;
+  max-width: 260px;
+  flex: none;
+}
+
+.gauge-track,
+.gauge-arc {
+  fill: none;
+  stroke-width: 12;
+  stroke-linecap: round;
+}
+
+.gauge-track {
+  stroke: #2a2f36;
+}
+
+.gauge-arc {
+  stroke: #34a853;
+  transition: stroke-dasharray 0.4s ease-out;
+}
+
+.gauge-ticks text {
+  fill: #9aa0a6;
+  font-size: 11px;
+  text-anchor: middle;
+}
+
+.gauge-needle {
+  stroke: #e8eaed;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transform-origin: 100px 100px;
+  transition: transform 0.4s ease-out;
+}
+
+.gauge-hub {
+  fill: #e8eaed;
+}
+
+.gauge-readout {
+  font-variant-numeric: tabular-nums;
+}
+
+.gauge-value {
+  font-size: 2.4rem;
+  font-weight: 600;
+}
+
+.gauge-unit {
+  color: #9aa0a6;
+}
+
+.gauge-detail {
+  font-size: 0.85rem;
+  color: #9aa0a6;
+}

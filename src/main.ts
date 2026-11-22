@@ -3,12 +3,16 @@ import { FountainDecoder, fnv1a, parseFrame, streamIdentity } from "./protocol";
 import { isContainer, unpackContainer } from "./container";
 import { buildFile, buildZip, parseVnaPayload } from "./payload";
 import { CimbarReceiver } from "./cimbar";
+import { SpeedGauge } from "./gauge";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const video = $<HTMLVideoElement>("video");
 const placeholder = $("placeholder");
 const bar = $("bar");
 const statusEl = $("status");
+/** Default full scale of the speed gauge (KB/s) per code type. */
+const GAUGE_SCALES = { qr: 20, color: 80 } as const;
+const gauge = new SpeedGauge($("gauge"), 80);
 const statsEl = $("stats");
 const startBtn = $<HTMLButtonElement>("start");
 const stopBtn = $<HTMLButtonElement>("stop");
@@ -39,6 +43,7 @@ function setReceiveMode(mode: ReceiveMode): void {
   receiveMode = mode;
   modeQrBtn.classList.toggle("selected", mode === "qr");
   modeColorBtn.classList.toggle("selected", mode === "color");
+  gauge.setDefaultScale(GAUGE_SCALES[mode]);
   placeholder.textContent =
     mode === "qr" ? "Point the camera at the animated QR stream." : "Point the camera at the animated color code.";
 }
@@ -84,6 +89,7 @@ function resetStats(): void {
 function updateStats(): void {
   const secs = (performance.now() - stats.since) / 1000;
   if (secs < 1) return;
+  gauge.tick();
   if (receiveMode === "color") {
     const found = stats.decodedFrames > 0 ? Math.round((100 * stats.found) / stats.decodedFrames) : 0;
     statsEl.textContent =
@@ -152,12 +158,8 @@ function ensureCimbar(): CimbarReceiver {
       if (!scanning || progress.length === 0) return;
       const done = Math.max(...progress);
       bar.style.width = `${(100 * done).toFixed(1)}%`;
-      const secs = startedAt > 0 ? (performance.now() - startedAt) / 1000 : 0;
-      const rate = secs > 0 ? (done * cimbarSize) / secs : 0;
-      setStatus(
-        `Receiving ${cimbarSize > 0 ? formatBytes(cimbarSize) : "…"} · ${Math.round(100 * done)}%` +
-          ` · ${formatBytes(rate)}/s`,
-      );
+      if (cimbarSize > 0) gauge.update(done * cimbarSize, cimbarSize);
+      setStatus(`Receiving ${cimbarSize > 0 ? formatBytes(cimbarSize) : "…"} · ${Math.round(100 * done)}%`);
     },
     onDone: (_name, bytes) => {
       if (scanning) void finishPayload(bytes);
@@ -245,14 +247,13 @@ function updateProgress(): void {
   // Only solved blocks are real progress: how many repair frames are needed to solve the missing blocks depends on
   // how many were missed, so any estimate based on the received frames fills up long before the end.
   bar.style.width = `${((100 * decoder.solvedCount) / k).toFixed(1)}%`;
-  const secs = (performance.now() - startedAt) / 1000;
-  const rate = secs > 0 ? (decoder.solvedCount * blockLen) / secs : 0;
+  // Every new frame carries one block's worth of information, even if it only solves blocks later on.
+  gauge.update(Math.min(decoder.usefulFrames * blockLen, totalLen), totalLen);
   // Repair frames which could not be used yet; each one solves at most one block once enough others are known.
   const buffered = decoder.usefulFrames - decoder.solvedCount;
   setStatus(
     `Receiving ${formatBytes(totalLen)} · ${decoder.solvedCount}/${k} blocks` +
-      (buffered > 0 ? ` (+${buffered} repair frames buffered)` : "") +
-      ` · ${formatBytes(rate)}/s`,
+      (buffered > 0 ? ` (+${buffered} repair frames buffered)` : ""),
   );
 }
 
@@ -373,6 +374,7 @@ function resetScanState(): void {
   startedAt = 0;
   cimbarSize = 0;
   cimbar?.reset();
+  gauge.reset();
   bar.style.width = "0";
 }
 
