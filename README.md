@@ -169,7 +169,7 @@ Alternatively, the payload can be sent as a [cimbar](https://github.com/sz3/libc
 - **Modes**: `Bm` (1024×720, recommended for wide screens), `Bu` (736×637) or `B` (1024×1024); the receiver detects the mode.
 - **File**: the payload (version 1 or 2) as the transferred file, compressed with zstd as cimbar expects. As the payload data is already compressed, zstd frames of raw blocks are fine.
 - **Pixel-exact**: the code must be shown unscaled (one image pixel per screen pixel), at about 15 frames per second.
-- **Receiver link**: `?mode=color` selects the color code receiver; the mode can also be switched on the page.
+- **Receiver link**: by default the receiver detects whether QR codes or a color code are shown; `?mode=color` or `?mode=qr` forces one type. The mode can also be switched on the page.
 
 While scanning, the receiver shows the camera resolution and frame rate, the decoded frame rate, the codes per decoded frame and the share of duplicate codes. Many duplicates mean that the sender could show new codes faster; few codes per frame mean that the codes are too dense or change too fast for the camera.
 

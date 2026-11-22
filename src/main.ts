@@ -21,6 +21,7 @@ const resultView = $("result-view");
 const shareZipBtn = $<HTMLButtonElement>("share-zip");
 const shareLogBtn = $<HTMLButtonElement>("share-log");
 const againBtn = $<HTMLButtonElement>("again");
+const modeAutoBtn = $<HTMLButtonElement>("mode-auto");
 const modeQrBtn = $<HTMLButtonElement>("mode-qr");
 const modeColorBtn = $<HTMLButtonElement>("mode-color");
 
@@ -35,19 +36,47 @@ let startedAt = 0;
 let zipFile: File | null = null;
 let logFile: File | null = null;
 
-// "qr": fountain-coded QR stream, "color": cimbar color code. The sender links to `?mode=color` for the latter.
-type ReceiveMode = "qr" | "color";
-let receiveMode: ReceiveMode = new URLSearchParams(location.search).get("mode") === "color" ? "color" : "qr";
+// "qr": fountain-coded QR stream, "color": cimbar color code, "auto" (default): whichever is found first, so that
+// the sender can let the user choose the code type after the receiver has been opened. `?mode=` forces a type.
+type CodeType = "qr" | "color";
+type ReceiveMode = CodeType | "auto";
+const modeParam = new URLSearchParams(location.search).get("mode");
+let receiveMode: ReceiveMode = modeParam === "color" || modeParam === "qr" ? modeParam : "auto";
+/** Code type found in auto mode, null while searching. */
+let detectedType: CodeType | null = null;
+
+/** The code type being decoded, null while both are searched for. */
+function activeType(): CodeType | null {
+  return receiveMode === "auto" ? detectedType : receiveMode;
+}
+
+function searchingText(): string {
+  const type = activeType();
+  return type === "qr" ? "Searching for QR stream…" : type === "color" ? "Searching for color code…" : "Searching for code…";
+}
 
 function setReceiveMode(mode: ReceiveMode): void {
   receiveMode = mode;
+  detectedType = null;
+  modeAutoBtn.classList.toggle("selected", mode === "auto");
   modeQrBtn.classList.toggle("selected", mode === "qr");
   modeColorBtn.classList.toggle("selected", mode === "color");
-  gauge.setDefaultScale(GAUGE_SCALES[mode]);
+  gauge.setDefaultScale(GAUGE_SCALES[mode === "auto" ? "color" : mode]);
   placeholder.textContent =
-    mode === "qr" ? "Point the camera at the animated QR stream." : "Point the camera at the animated color code.";
+    mode === "qr"
+      ? "Point the camera at the animated QR stream."
+      : mode === "color"
+        ? "Point the camera at the animated color code."
+        : "Point the camera at the animated code.";
 }
 setReceiveMode(receiveMode);
+
+/** In auto mode, decodes only the given code type from now on. */
+function onCodeTypeFound(type: CodeType): void {
+  if (receiveMode !== "auto" || detectedType !== null) return;
+  detectedType = type;
+  gauge.setDefaultScale(GAUGE_SCALES[type]);
+}
 
 function setStatus(text: string, error = false): void {
   statusEl.textContent = text;
@@ -90,7 +119,13 @@ function updateStats(): void {
   const secs = (performance.now() - stats.since) / 1000;
   if (secs < 1) return;
   gauge.tick();
-  if (receiveMode === "color") {
+  const type = activeType();
+  if (type === null) {
+    statsEl.textContent = `Camera ${video.videoWidth}×${video.videoHeight} @ ${Math.round(stats.cameraFrames / secs)} fps`;
+    resetStats();
+    return;
+  }
+  if (type === "color") {
     const found = stats.decodedFrames > 0 ? Math.round((100 * stats.found) / stats.decodedFrames) : 0;
     statsEl.textContent =
       `Camera ${video.videoWidth}×${video.videoHeight} @ ${Math.round(stats.cameraFrames / secs)} fps · ` +
@@ -147,10 +182,12 @@ function ensureCimbar(): CimbarReceiver {
   const count = Math.max(2, Math.min(4, (navigator.hardwareConcurrency || 2) - 1));
   cimbar = new CimbarReceiver(count, {
     onFrame: (found, bytes, header) => {
+      if (activeType() !== "color" && !header) return;
       stats.decodedFrames++;
       if (found) stats.found++;
       stats.bytes += bytes;
       if (!scanning || !header) return;
+      onCodeTypeFound("color");
       if (startedAt === 0) startedAt = performance.now();
       cimbarSize = header.size;
     },
@@ -184,8 +221,10 @@ function startFrameLoop(): void {
     if (!scanning || id !== frameLoopId) return;
     stats.cameraFrames++;
     updateStats();
-    if (receiveMode === "color") void ensureCimbar().submit(video);
-    else void submitFrame();
+    const type = activeType();
+    // While searching, each frame is offered to both decoders (each one drops it if all its workers are busy)
+    if (type !== "qr") void ensureCimbar().submit(video);
+    if (type !== "color") void submitFrame();
     if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(step);
     else requestAnimationFrame(step);
   };
@@ -222,12 +261,13 @@ async function resumeCamera(): Promise<void> {
 // ---- fountain assembly
 
 function onCode(bytes: Uint8Array): void {
-  if (!scanning) return;
+  if (!scanning || activeType() === "color") return;
   const parsed = parseFrame(bytes);
   if (!parsed.ok) {
     if (parsed.message) setStatus(parsed.message, true);
     return;
   }
+  onCodeTypeFound("qr");
   const { header, block } = parsed;
   const id = streamIdentity(header);
   if (id !== identity || !decoder) {
@@ -335,7 +375,7 @@ async function startCamera(): Promise<void> {
     scanning = true;
     resetStats();
     statsEl.textContent = "";
-    if (!startedAt) setStatus(receiveMode === "qr" ? "Searching for QR stream…" : "Searching for color code…");
+    if (!startedAt) setStatus(searchingText());
     void requestWakeLock();
     startFrameLoop();
   } catch (e) {
@@ -373,6 +413,7 @@ function resetScanState(): void {
   identity = "";
   startedAt = 0;
   cimbarSize = 0;
+  if (receiveMode === "auto") setReceiveMode("auto");
   cimbar?.reset();
   gauge.reset();
   bar.style.width = "0";
@@ -411,6 +452,7 @@ stopBtn.addEventListener("click", () => {
   setStatus("Stopped.");
 });
 for (const [button, mode] of [
+  [modeAutoBtn, "auto"],
   [modeQrBtn, "qr"],
   [modeColorBtn, "color"],
 ] as const) {
@@ -418,7 +460,7 @@ for (const [button, mode] of [
     if (mode === receiveMode) return;
     setReceiveMode(mode);
     resetScanState();
-    if (scanning) setStatus(mode === "qr" ? "Searching for QR stream…" : "Searching for color code…");
+    if (scanning) setStatus(searchingText());
   });
 }
 shareZipBtn.addEventListener("click", () => void shareFile(zipFile));

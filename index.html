@@ -15,7 +15,7 @@
       <section id="scan-view">
         <div class="viewport">
           <video id="video" playsinline muted autoplay></video>
-          <div id="placeholder">Point the camera at the animated QR stream.</div>
+          <div id="placeholder">Point the camera at the animated code.</div>
         </div>
         <div id="gauge" class="gauge" hidden>
           <svg viewBox="0 0 200 108" aria-hidden="true"></svg>
@@ -28,6 +28,7 @@
         <p id="status">Ready.</p>
         <p id="stats"></p>
         <div class="modes" role="group" aria-label="Code type">
+          <button id="mode-auto" type="button" class="secondary">Auto</button>
           <button id="mode-qr" type="button" class="secondary">QR codes</button>
           <button id="mode-color" type="button" class="secondary">Color code</button>
         </div>
