@@ -118,12 +118,6 @@ async function decodeFrame(data) {
   self.postMessage({ type: "frame", found: true, mode: data.mode, via, chunks }, [chunks.buffer]);
 }
 
-// Drops partially received files: the decoder state is reset whenever the mode changes.
-function reset() {
-  Module._cimbard_configure_decode(sinkMode === 66 ? 67 : 66);
-  sinkMode = 0;
-}
-
 function decodeChunks(data) {
   if (data.mode !== sinkMode) {
     sinkMode = data.mode;
@@ -180,7 +174,6 @@ function handle(data) {
     try {
       if (data.type === "frame") await decodeFrame(data);
       else if (data.type === "chunks") decodeChunks(data);
-      else if (data.type === "reset") reset();
     } catch (e) {
       self.postMessage({
         type: data.type === "frame" ? "frame" : "error",

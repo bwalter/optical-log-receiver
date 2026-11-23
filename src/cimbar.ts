@@ -46,7 +46,7 @@ const workerUrl = `${import.meta.env.BASE_URL}cimbar/cimbar-worker.js?v=${import
 
 export class CimbarReceiver {
   private readonly slots: Slot[] = [];
-  private readonly sink: Worker;
+  private sink: Worker;
   /** Detected sender mode, 0 while unknown: frames are then tried with each mode in turn. */
   private mode = 0;
   private attempt = 0;
@@ -73,14 +73,19 @@ export class CimbarReceiver {
       };
       this.slots.push(slot);
     }
-    this.sink = new Worker(workerUrl);
-    this.sink.onerror = (e) => callbacks.onError(`Decoder failed: ${e.message || "failed to load"}`);
-    this.sink.onmessage = (e: MessageEvent<SinkMessage>) => {
+    this.sink = this.createSink();
+  }
+
+  private createSink(): Worker {
+    const sink = new Worker(workerUrl);
+    sink.onerror = (e) => this.callbacks.onError(`Decoder failed: ${e.message || "failed to load"}`);
+    sink.onmessage = (e: MessageEvent<SinkMessage>) => {
       const data = e.data;
-      if (data.type === "progress") callbacks.onProgress(data.progress);
-      else if (data.type === "done") callbacks.onDone(data.name, data.bytes);
-      else callbacks.onError(data.message);
+      if (data.type === "progress") this.callbacks.onProgress(data.progress);
+      else if (data.type === "done") this.callbacks.onDone(data.name, data.bytes);
+      else this.callbacks.onError(data.message);
     };
+    return sink;
   }
 
   /** Starts decoding the current video frame, unless all workers are busy. */
@@ -110,10 +115,15 @@ export class CimbarReceiver {
     }
   }
 
-  /** Forgets the detected mode and any partially received file. */
+  /**
+   * Forgets the detected mode and any partially received file. The sink worker is replaced, as libcimbar keeps the
+   * last decompressed file per id (encode id and size) beyond its own reset: the same transmission received again
+   * would otherwise come out empty.
+   */
   reset(): void {
     this.mode = 0;
-    this.sink.postMessage({ type: "reset" });
+    this.sink.terminate();
+    this.sink = this.createSink();
   }
 
   dispose(): void {
