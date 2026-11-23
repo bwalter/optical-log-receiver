@@ -376,6 +376,7 @@ async function startCamera(): Promise<void> {
     placeholder.hidden = true;
     startBtn.hidden = true;
     stopBtn.hidden = false;
+    scanView.classList.add("live");
     scanning = true;
     resetStats();
     statsEl.textContent = "";
@@ -408,6 +409,7 @@ function stopCamera(): void {
   placeholder.hidden = false;
   startBtn.hidden = false;
   stopBtn.hidden = true;
+  scanView.classList.remove("live");
   void wakeLock?.release().catch(() => {});
   wakeLock = null;
 }

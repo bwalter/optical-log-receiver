@@ -17,21 +17,33 @@
           <video id="video" playsinline muted autoplay></video>
           <div id="placeholder">Point the camera at the animated code.</div>
         </div>
-        <div id="gauge" class="gauge" hidden>
-          <svg viewBox="0 0 200 108" aria-hidden="true"></svg>
-          <div class="gauge-readout">
-            <div><span class="gauge-value">0</span> <span class="gauge-unit">KB/s</span></div>
-            <div class="gauge-detail"></div>
+        <!-- Both panels share the same space, so that the camera view keeps its size when reception starts -->
+        <div class="panel">
+          <div class="panel-live">
+            <div id="gauge" class="gauge" hidden>
+              <svg viewBox="0 0 200 108" aria-hidden="true"></svg>
+              <div class="gauge-readout">
+                <div><span class="gauge-value">0</span> <span class="gauge-unit">KB/s</span></div>
+                <div class="gauge-detail"></div>
+              </div>
+            </div>
+            <div class="progress"><div id="bar"></div></div>
+            <p id="stats"></p>
+          </div>
+          <div class="panel-idle">
+            <ol class="steps">
+              <li>Start the camera</li>
+              <li>Point it at the code on the car screen</li>
+              <li>Share the received file</li>
+            </ol>
+            <div class="modes" role="group" aria-label="Code type">
+              <button id="mode-auto" type="button" class="secondary">Auto</button>
+              <button id="mode-qr" type="button" class="secondary">QR codes</button>
+              <button id="mode-color" type="button" class="secondary">Color code</button>
+            </div>
           </div>
         </div>
-        <div class="progress"><div id="bar"></div></div>
         <p id="status">Ready.</p>
-        <p id="stats"></p>
-        <div class="modes" role="group" aria-label="Code type">
-          <button id="mode-auto" type="button" class="secondary">Auto</button>
-          <button id="mode-qr" type="button" class="secondary">QR codes</button>
-          <button id="mode-color" type="button" class="secondary">Color code</button>
-        </div>
         <button id="start" type="button">Start camera</button>
         <button id="stop" type="button" class="secondary" hidden>Stop</button>
       </section>

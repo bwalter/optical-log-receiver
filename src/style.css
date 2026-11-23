@@ -9,29 +9,43 @@
   box-sizing: border-box;
 }
 
+/* The page fits the screen and never scrolls: the camera view takes whatever room the rest leaves. */
+html,
 body {
+  height: 100%;
   margin: 0;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 main {
+  height: 100vh;
+  height: 100dvh;
   max-width: 640px;
   margin: 0 auto;
-  padding: 16px;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+    max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 h1 {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   margin: 0;
+  flex: none;
 }
 
 section {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+}
+
+section > * {
+  flex: none;
 }
 
 [hidden] {
@@ -40,7 +54,8 @@ section {
 
 .viewport {
   position: relative;
-  aspect-ratio: 3 / 4;
+  flex: 1 1 0;
+  min-height: 120px;
   background: #000;
   border-radius: 12px;
   overflow: hidden;
@@ -76,9 +91,15 @@ video {
   transition: width 0.15s linear;
 }
 
+/* Fixed height (two lines at most), so that longer messages do not move the layout */
 #status {
   margin: 0;
-  min-height: 1.5em;
+  height: 2.7em;
+  line-height: 1.35;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   font-variant-numeric: tabular-nums;
 }
 
@@ -88,7 +109,10 @@ video {
 
 #stats {
   margin: 0;
-  min-height: 1.2em;
+  height: 1.3em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 0.8em;
   opacity: 0.7;
   font-variant-numeric: tabular-nums;
@@ -125,8 +149,8 @@ dd {
 }
 
 footer {
-  margin-top: 8px;
-  font-size: 0.85rem;
+  flex: none;
+  font-size: 0.75rem;
   color: #9aa0a6;
   text-align: center;
 }
@@ -150,15 +174,45 @@ footer a {
   background: #1a73e8;
 }
 
+/* The panels are stacked in one grid cell: the taller one sets the height, the other one is only made invisible. */
+.panel {
+  display: grid;
+}
+
+.panel > * {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+#scan-view:not(.live) .panel-live,
+#scan-view.live .panel-idle {
+  visibility: hidden;
+}
+
 .gauge {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
+/* Keeps its room while hidden (before the first data arrives) */
+.gauge[hidden] {
+  display: flex !important;
+  visibility: hidden;
+}
+
+/* Shown at zero, dimmed, while searching for the code */
+#scan-view.live .gauge[hidden] {
+  visibility: visible;
+  opacity: 0.4;
+}
+
 .gauge svg {
-  width: 52%;
-  max-width: 260px;
+  width: 42%;
+  max-width: 200px;
   flex: none;
 }
 
@@ -201,7 +255,7 @@ footer a {
 }
 
 .gauge-value {
-  font-size: 2.4rem;
+  font-size: 2.2rem;
   font-weight: 600;
 }
 
@@ -212,4 +266,36 @@ footer a {
 .gauge-detail {
   font-size: 0.85rem;
   color: #9aa0a6;
+}
+
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #c4c7cc;
+}
+
+.steps li {
+  counter-increment: step;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.steps li::before {
+  content: counter(step);
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #1a73e8;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
