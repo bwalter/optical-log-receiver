@@ -13,9 +13,12 @@
       <h1>VNA Log Receiver</h1>
 
       <section id="scan-view">
-        <div class="viewport">
-          <video id="video" playsinline muted autoplay></video>
-          <div id="placeholder">Point the camera at the animated code.</div>
+        <!-- The camera view has the shape of the color code: a wide view hints at holding the phone sideways -->
+        <div class="camera">
+          <div class="viewport">
+            <video id="video" playsinline muted autoplay></video>
+            <div id="placeholder">Point the camera at the animated code.</div>
+          </div>
         </div>
         <!-- Both panels share the same space, so that the camera view keeps its size when reception starts -->
         <div class="panel">
@@ -33,14 +36,9 @@
           <div class="panel-idle">
             <ol class="steps">
               <li>Start the camera</li>
-              <li>Point it at the code on the car screen</li>
+              <li>Hold the phone sideways, facing the code</li>
               <li>Share the received file</li>
             </ol>
-            <div class="modes" role="group" aria-label="Code type">
-              <button id="mode-auto" type="button" class="secondary">Auto</button>
-              <button id="mode-qr" type="button" class="secondary">QR codes</button>
-              <button id="mode-color" type="button" class="secondary">Color code</button>
-            </div>
           </div>
         </div>
         <p id="status">Ready.</p>

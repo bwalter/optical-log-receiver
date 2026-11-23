@@ -52,10 +52,19 @@ section > * {
   display: none !important;
 }
 
-.viewport {
-  position: relative;
+/* Takes the remaining room; the camera view inside keeps the aspect ratio of the color code (1024×720). */
+.camera {
   flex: 1 1 0;
   min-height: 120px;
+  container-type: size;
+  display: grid;
+  place-items: center;
+}
+
+.viewport {
+  position: relative;
+  width: min(100cqw, 100cqh * 64 / 45);
+  aspect-ratio: 64 / 45;
   background: #000;
   border-radius: 12px;
   overflow: hidden;
@@ -159,20 +168,6 @@ footer a {
   color: #8ab4f8;
 }
 
-.modes {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-}
-
-.modes button {
-  font-size: 0.95rem;
-  padding: 10px;
-}
-
-.modes button.selected {
-  background: #1a73e8;
-}
 
 /* The panels are stacked in one grid cell: the taller one sets the height, the other one is only made invisible. */
 .panel {
@@ -298,4 +293,46 @@ footer a {
   color: #fff;
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+/* Phone held sideways: the camera view on the left, everything else on the right */
+@media (orientation: landscape) and (max-height: 600px) {
+  main {
+    max-width: none;
+  }
+
+  h1 {
+    display: none;
+  }
+
+  #scan-view {
+    display: grid;
+    grid-template-columns: 1fr minmax(240px, 36%);
+    grid-template-rows: 1fr auto auto;
+    column-gap: 16px;
+    row-gap: 8px;
+  }
+
+  .camera {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    min-height: 0;
+  }
+
+  .panel {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: end;
+  }
+
+  #status {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  #start,
+  #stop {
+    grid-column: 2;
+    grid-row: 3;
+  }
 }

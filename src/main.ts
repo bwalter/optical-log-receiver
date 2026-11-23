@@ -21,9 +21,6 @@ const resultView = $("result-view");
 const shareZipBtn = $<HTMLButtonElement>("share-zip");
 const shareLogBtn = $<HTMLButtonElement>("share-log");
 const againBtn = $<HTMLButtonElement>("again");
-const modeAutoBtn = $<HTMLButtonElement>("mode-auto");
-const modeQrBtn = $<HTMLButtonElement>("mode-qr");
-const modeColorBtn = $<HTMLButtonElement>("mode-color");
 
 const WORKER_COUNT = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) - 1));
 
@@ -58,9 +55,6 @@ function searchingText(): string {
 function setReceiveMode(mode: ReceiveMode): void {
   receiveMode = mode;
   detectedType = null;
-  modeAutoBtn.classList.toggle("selected", mode === "auto");
-  modeQrBtn.classList.toggle("selected", mode === "qr");
-  modeColorBtn.classList.toggle("selected", mode === "color");
   gauge.setDefaultScale(GAUGE_SCALES[mode === "auto" ? "color" : mode]);
   placeholder.textContent =
     mode === "qr"
@@ -457,18 +451,6 @@ stopBtn.addEventListener("click", () => {
   stopCamera();
   setStatus("Stopped.");
 });
-for (const [button, mode] of [
-  [modeAutoBtn, "auto"],
-  [modeQrBtn, "qr"],
-  [modeColorBtn, "color"],
-] as const) {
-  button.addEventListener("click", () => {
-    if (mode === receiveMode) return;
-    setReceiveMode(mode);
-    resetScanState();
-    if (scanning) setStatus(searchingText());
-  });
-}
 shareZipBtn.addEventListener("click", () => void shareFile(zipFile));
 shareLogBtn.addEventListener("click", () => void shareFile(logFile));
 againBtn.addEventListener("click", () => {
