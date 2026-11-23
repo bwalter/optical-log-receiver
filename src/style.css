@@ -81,10 +81,11 @@ section > * {
   }
 }
 
+/* Fills the view even if the picture size is reported late or not at all, so that the frame never exceeds it */
 video {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 /* Where the color code (1024×720) fills the camera picture best; the rest is dimmed */
@@ -93,7 +94,7 @@ video {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: min(100cqw, 100cqh * 64 / 45);
+  width: min(94cqw, 94cqh * 64 / 45);
   aspect-ratio: 64 / 45;
   border: 2px dashed rgb(255 255 255 / 0.7);
   border-radius: 6px;
@@ -143,7 +144,7 @@ video {
 
 /* Phone held sideways while the page stays upright (rotation lock): the code appears turned in the camera picture */
 .viewport.sideways .code-frame {
-  width: min(100cqw, 100cqh * 45 / 64);
+  width: min(94cqw, 94cqh * 45 / 64);
   aspect-ratio: 45 / 64;
 }
 
