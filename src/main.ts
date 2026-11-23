@@ -4,6 +4,7 @@ import { isContainer, unpackContainer } from "./container";
 import { buildFile, buildZip, isZip, parseVnaPayload } from "./payload";
 import { CimbarReceiver } from "./cimbar";
 import { SpeedGauge } from "./gauge";
+import { RECEIVER_VERSION, checkVersion } from "./version";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const video = $<HTMLVideoElement>("video");
@@ -467,3 +468,15 @@ document.addEventListener("visibilitychange", () => {
   void requestWakeLock();
   void resumeCamera();
 });
+// Restored from the back/forward cache (e.g. still showing a previous transfer): start over with a fresh page
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted) location.reload();
+});
+
+$("version").textContent = `v${RECEIVER_VERSION}`;
+const versionCheck = checkVersion();
+if (versionCheck !== "ok") {
+  startBtn.disabled = true;
+  if (versionCheck === "reloading") setStatus("Updating…");
+  else setStatus(versionCheck, true);
+}

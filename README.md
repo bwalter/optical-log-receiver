@@ -170,6 +170,7 @@ Alternatively, the payload can be sent as a [cimbar](https://github.com/sz3/libc
 - **File**: the payload (version 1 or 2) as the transferred file, compressed with zstd as cimbar expects. As the payload data is already compressed, zstd frames of raw blocks are fine.
 - **Pixel-exact**: the code must be shown unscaled (one image pixel per screen pixel), at about 15 frames per second.
 - **Receiver link**: by default the receiver detects whether QR codes or a color code are shown; `?mode=color` or `?mode=qr` forces one type.
+- **Minimum version**: senders link to `?min=N&t=<nonce>`. A receiver older than `RECEIVER_VERSION` N (`src/version.ts`) reloads once from a fresh URL, or reports that it is outdated (e.g. offline). The unique `t` makes the phone open a fresh page rather than a tab still showing a previous transfer.
 
 While scanning, the receiver shows the camera resolution and frame rate, the decoded frame rate, the codes per decoded frame and the share of duplicate codes. Many duplicates mean that the sender could show new codes faster; few codes per frame mean that the codes are too dense or change too fast for the camera.
 
