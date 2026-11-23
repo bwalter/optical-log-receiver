@@ -1,7 +1,7 @@
 import QrWorker from "./qr-worker?worker";
 import { FountainDecoder, fnv1a, parseFrame, streamIdentity } from "./protocol";
 import { isContainer, unpackContainer } from "./container";
-import { buildFile, buildZip, parseVnaPayload } from "./payload";
+import { buildFile, buildZip, isZip, parseVnaPayload } from "./payload";
 import { CimbarReceiver } from "./cimbar";
 import { SpeedGauge } from "./gauge";
 
@@ -314,8 +314,9 @@ async function finishPayload(fileBytes: Uint8Array): Promise<void> {
   setStatus("Decoding…");
   try {
     const log = parseVnaPayload(fileBytes);
-    zipFile = buildZip(log);
     logFile = buildFile(log);
+    // A zip (several files sent at once) is shared as is, not zipped again
+    zipFile = isZip(log) ? null : buildZip(log);
     showResult(log.datetime, zipFile, logFile);
   } catch (e) {
     resetScanState();
@@ -323,12 +324,15 @@ async function finishPayload(fileBytes: Uint8Array): Promise<void> {
   }
 }
 
-function showResult(datetime: string, zip: File, log: File): void {
+function showResult(datetime: string, zip: File | null, log: File): void {
   $("r-datetime").textContent = datetime;
   $("r-logname").textContent = log.name;
-  $("r-zipname").textContent = zip.name;
-  shareZipBtn.textContent = `Share zip (${formatBytes(zip.size)})`;
-  shareLogBtn.textContent = `Share unzipped (${formatBytes(log.size)})`;
+  $("r-zipname").textContent = zip?.name ?? "";
+  $("r-zipname").hidden = zip === null;
+  $("r-zip-label").hidden = zip === null;
+  shareZipBtn.hidden = zip === null;
+  if (zip) shareZipBtn.textContent = `Share zip (${formatBytes(zip.size)})`;
+  shareLogBtn.textContent = zip ? `Share unzipped (${formatBytes(log.size)})` : `Share (${formatBytes(log.size)})`;
   scanView.hidden = true;
   resultView.hidden = false;
 }

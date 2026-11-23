@@ -126,7 +126,14 @@ const MIME_TYPES: Record<string, string> = {
   csv: "text/csv",
   json: "application/json",
   xml: "application/xml",
+  mp4: "video/mp4",
+  zip: "application/zip",
 };
+
+/** Several files sent at once arrive as a zip. */
+export function isZip(log: VnaLog): boolean {
+  return log.extension.toLowerCase() === "zip";
+}
 
 /** `<prefix>-<datetime>.<extension>` and `<prefix>-<datetime>.zip`. */
 export function outputNames(log: VnaLog): { fileName: string; zipName: string; mimeType: string } {

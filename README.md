@@ -2,7 +2,7 @@
 
 A mobile web app that receives VNA log files from a screen via an animated, fountain-coded QR stream — no network connection, pairing or app install required between the devices.
 
-The phone's camera reads the QR stream produced by a [Decimen Optical Transfer](https://github.com/bashalarmistalt/decimen-optical-transfer) compatible sender (wire format v3), reassembles the payload, decodes the brotli-compressed content, saves it as `<prefix>-<datetime>.<extension>` (e.g. `vna-2026-10-29T14-54-07Z.log`), packs it into `<prefix>-<datetime>.zip` and offers either the zip or the unzipped file via the native share sheet (or as a download where file sharing is not supported).
+The phone's camera reads the QR stream produced by a [Decimen Optical Transfer](https://github.com/bashalarmistalt/decimen-optical-transfer) compatible sender (wire format v3), reassembles the payload, decodes the brotli-compressed content, saves it as `<prefix>-<datetime>.<extension>` (e.g. `vna-2026-10-29T14-54-07Z.log`), packs it into `<prefix>-<datetime>.zip` and offers either the zip or the unzipped file via the native share sheet (or as a download where file sharing is not supported). A received zip (extension `zip`, e.g. several files bundled by the sender) is offered as is, without zipping it again.
 
 Highlights:
 
@@ -63,10 +63,10 @@ vna-brotli-base64-version1\n<prefix>\n<extension>\n<datetime>\n<data>
 
 Rules for the sender:
 
-- **File names**: `<prefix>-<datetime>.<extension>`, zipped as `<prefix>-<datetime>.zip`, e.g. `vna` + `log` → `vna-2026-10-29T14-54-07Z.log` in `vna-2026-10-29T14-54-07Z.zip`. With an empty extension line the file has no extension.
+- **File names**: `<prefix>-<datetime>.<extension>`, zipped as `<prefix>-<datetime>.zip`, e.g. `vna` + `log` → `vna-2026-10-29T14-54-07Z.log` in `vna-2026-10-29T14-54-07Z.zip`. With an empty extension line the file has no extension. With the extension `zip` the file is not zipped again.
 - **Prefix**: must not contain `/ \ < > : " | ? *` or control characters and must not start with `.` (such characters are removed; a prefix that is empty afterwards makes the receiver reject the file).
 - **Extension**: other characters are removed; a leading `.` is tolerated.
-- **File content**: any bytes (text should be UTF-8). It is stored unchanged (line endings are kept as sent). The extensions `log`/`txt`, `csv`, `json` and `xml` are shared with a matching media type, anything else as `application/octet-stream`.
+- **File content**: any bytes (text should be UTF-8). It is stored unchanged (line endings are kept as sent). The extensions `log`/`txt`, `csv`, `json`, `xml`, `mp4` and `zip` are shared with a matching media type, anything else as `application/octet-stream`.
 - **Compression**: brotli (RFC 7932), raw stream as produced by any standard brotli library; quality 11 recommended for the smallest transfer. Not gzip/deflate.
 - **Datetime**: the time the file was captured/exported. In file names `:` becomes `-`.
 - **No** BOM, no trailing data after the base64. A trailing newline is tolerated.
