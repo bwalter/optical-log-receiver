@@ -18,6 +18,11 @@
           <div class="viewport">
             <video id="video" playsinline muted autoplay></video>
             <div id="placeholder">Point the camera at the animated code.</div>
+            <!-- Only shown in portrait: the code is wide, so a sideways phone films it with more pixels -->
+            <div class="rotate-hint">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2" /><path d="M10 18h4" /></svg>
+              Turn sideways for a faster transfer
+            </div>
           </div>
         </div>
         <!-- Both panels share the same space, so that the camera view keeps its size when reception starts -->
