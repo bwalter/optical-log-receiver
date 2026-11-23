@@ -5,6 +5,7 @@ import { buildFile, buildZip, isZip, parseVnaPayload } from "./payload";
 import { CimbarReceiver } from "./cimbar";
 import { SpeedGauge } from "./gauge";
 import { RECEIVER_VERSION, checkVersion } from "./version";
+import { SidewaysDetector } from "./orientation";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const video = $<HTMLVideoElement>("video");
@@ -344,6 +345,23 @@ function fitViewportToVideo(): void {
 }
 
 video.addEventListener("loadedmetadata", fitViewportToVideo);
+
+// With the screen rotation locked, the page (and the camera picture) stays upright while the phone is held sideways:
+// the code then appears turned in the camera picture
+const portraitQuery = matchMedia("(orientation: portrait)");
+const sideways = new SidewaysDetector(() => updateSideways());
+
+function updateSideways(): void {
+  viewport.classList.toggle("sideways", sideways.isSideways && portraitQuery.matches);
+}
+
+portraitQuery.addEventListener("change", updateSideways);
+
+/** Starts the camera, after asking (within the tap) to read the motion sensors. */
+async function startFromTap(): Promise<void> {
+  await sideways.start();
+  await startCamera();
+}
 video.addEventListener("resize", fitViewportToVideo);
 
 async function acquireCamera(): Promise<MediaStream> {
@@ -460,7 +478,7 @@ async function shareFile(file: File | null): Promise<void> {
 
 startBtn.addEventListener("click", () => {
   resetScanState();
-  void startCamera();
+  void startFromTap();
 });
 stopBtn.addEventListener("click", () => {
   stopCamera();
@@ -474,7 +492,7 @@ againBtn.addEventListener("click", () => {
   resultView.hidden = true;
   scanView.hidden = false;
   resetScanState();
-  void startCamera();
+  void startFromTap();
 });
 // The browser drops the wake lock whenever the page is hidden.
 document.addEventListener("visibilitychange", () => {

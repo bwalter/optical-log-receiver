@@ -141,6 +141,16 @@ video {
   }
 }
 
+/* Phone held sideways while the page stays upright (rotation lock): the code appears turned in the camera picture */
+.viewport.sideways .code-frame {
+  width: min(100cqw, 100cqh * 45 / 64);
+  aspect-ratio: 45 / 64;
+}
+
+.viewport.sideways .rotate-hint {
+  display: none;
+}
+
 @media (orientation: landscape) {
   .rotate-hint {
     display: none;
