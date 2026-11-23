@@ -13,10 +13,11 @@
       <h1>VNA Log Receiver</h1>
 
       <section id="scan-view">
-        <!-- The camera view has the shape of the color code: a wide view hints at holding the phone sideways -->
+        <!-- The whole camera picture, with the area the code fills best: held upright, a wide code only uses a band -->
         <div class="camera">
           <div class="viewport">
             <video id="video" playsinline muted autoplay></video>
+            <div class="code-frame"></div>
             <div id="placeholder">Point the camera at the animated code.</div>
             <!-- Only shown in portrait: the code is wide, so a sideways phone films it with more pixels -->
             <div class="rotate-hint">

@@ -334,6 +334,18 @@ function showResult(datetime: string, zip: File | null, log: File): void {
 
 // ---- camera
 
+const viewport = video.parentElement!;
+
+/** Gives the camera view the shape of the camera picture (which turns with the phone). */
+function fitViewportToVideo(): void {
+  if (!video.videoWidth || !video.videoHeight) return;
+  viewport.style.setProperty("--cam-w", String(video.videoWidth));
+  viewport.style.setProperty("--cam-h", String(video.videoHeight));
+}
+
+video.addEventListener("loadedmetadata", fitViewportToVideo);
+video.addEventListener("resize", fitViewportToVideo);
+
 async function acquireCamera(): Promise<MediaStream> {
   const base: MediaTrackConstraints = {
     facingMode: { ideal: "environment" },
@@ -401,6 +413,8 @@ function stopCamera(): void {
   stream?.getTracks().forEach((t) => t.stop());
   stream = null;
   video.srcObject = null;
+  viewport.style.removeProperty("--cam-w");
+  viewport.style.removeProperty("--cam-h");
   placeholder.hidden = false;
   startBtn.hidden = false;
   stopBtn.hidden = true;
